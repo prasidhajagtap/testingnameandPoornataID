@@ -3,113 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dash Sync | SharePoint Link Tester</title>
+    <title>Dash Game | Handshake Receiver</title>
     <style>
         :root { --dash-blue: #0056b3; --seamex-orange: #ff6600; --bg: #f4f7f9; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); border-top: 8px solid var(--dash-blue); }
-        .logo-area { text-align: center; margin-bottom: 25px; }
-        .powered-by { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; }
-        .data-row { background: #fafafa; border: 1px solid #eaeaea; padding: 15px; border-radius: 10px; margin-bottom: 12px; position: relative; }
-        .label { font-size: 11px; color: var(--dash-blue); font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
-        .value { font-size: 18px; color: #333; font-family: 'Monaco', 'Consolas', monospace; word-break: break-all; min-height: 24px; }
-        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-top: 8px; font-weight: bold; }
-        .fail { background: #ffebee; color: #c62828; }
-        .success { background: #e8f5e9; color: #2e7d32; }
-        .info { background: #e3f2fd; color: #1565c0; }
-        button { width: 100%; margin-top: 20px; padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: var(--dash-blue); color: white; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); border-top: 8px solid var(--dash-blue); text-align: center;}
+        .powered-by { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin: 5px 0 20px 0; }
+        .data-box { background: #f8f9fa; border: 1px solid #eaeaea; padding: 15px; border-radius: 12px; margin-bottom: 10px; text-align: left; }
+        .label { font-size: 11px; color: var(--dash-blue); font-weight: 800; text-transform: uppercase; }
+        .value { font-size: 18px; color: #333; font-family: monospace; margin-top: 5px; min-height: 22px; }
+        .status { font-size: 12px; margin-top: 10px; padding: 5px; border-radius: 4px; font-weight: bold; }
+        .waiting { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .btn-launch { background: var(--dash-blue); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; margin-top: 15px; cursor: pointer; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="logo-area">
-        <h2 style="margin:0; color: #222;">Dash Game Sync</h2>
-        <div class="powered-by">Powered By Seamex</div>
+    <h2 style="margin:0;">Identity Link</h2>
+    <div class="powered-by">Powered By Seamex</div>
+
+    <div id="status-msg" class="status waiting">Verifying ADFS Session...</div>
+
+    <div class="data-box">
+        <div class="label">Employee ID</div>
+        <div id="display-id" class="value">---</div>
     </div>
 
-    <div class="data-row">
-        <div class="label">Poornata ID (hdnpoornataid)</div>
-        <div id="p-id" class="value">Detecting...</div>
-        <div id="id-status" class="status-tag fail">Offline</div>
+    <div class="data-box">
+        <div class="label">Employee Name</div>
+        <div id="display-name" class="value">---</div>
     </div>
 
-    <div class="data-row">
-        <div class="label">Employee Name (hdnName)</div>
-        <div id="p-name" class="value">Detecting...</div>
-        <div id="name-status" class="status-tag fail">Offline</div>
-    </div>
-
-    <div class="data-row" style="border-left: 4px solid var(--seamex-orange);">
-        <div class="label">Link Source</div>
-        <div id="p-source" class="value" style="font-size: 14px;">None</div>
-    </div>
-
-    <button onclick="startDeepScan()">Manual Refresh</button>
+    <button id="launch-btn" class="btn-launch" onclick="launchGame()">START DASH GAME</button>
 </div>
 
 <script>
-    function startDeepScan() {
+    function processHandshake() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // 1. Define the keys we are looking for (including your new SharePoint classes)
-        const idKeys = ['hdnpoornataid', 'hdnPoornataId', 'id', 'empid'];
-        const nameKeys = ['hdnName', 'name', 'user'];
+        // These are the parameters typically passed after an ADFS PeopleSoft redirect
+        let empId = urlParams.get('hdnpoornataid') || urlParams.get('id');
+        let empName = urlParams.get('hdnName') || urlParams.get('name');
 
-        let foundId = null;
-        let foundName = null;
-        let source = "None";
-
-        // 2. Search URL Parameters for any of the keys
-        for (let key of idKeys) {
-            let val = urlParams.get(key);
-            if (val && !val.includes('[') && val !== "null") {
-                foundId = val;
-                source = "SharePoint URL Link";
-                break;
-            } else if (val) {
-                foundId = "Placeholder Detected: " + val;
-            }
-        }
-
-        for (let key of nameKeys) {
-            let val = urlParams.get(key);
-            if (val && !val.includes('[') && val !== "null") {
-                foundName = decodeURIComponent(val).replace(/_/g, ' ');
-                break;
-            } else if (val) {
-                foundName = "Placeholder Detected: " + val;
-            }
-        }
-
-        // 3. Update UI Elements
-        const idDisplay = document.getElementById('p-id');
-        const nameDisplay = document.getElementById('p-name');
-        const sourceDisplay = document.getElementById('p-source');
-
-        if (foundId) {
-            idDisplay.innerText = foundId;
-            const isPlaceholder = foundId.includes('Placeholder');
-            document.getElementById('id-status').innerText = isPlaceholder ? "PENDING DATA" : "SYNCED";
-            document.getElementById('id-status').className = isPlaceholder ? "status-tag info" : "status-tag success";
+        if (empId && empName && !empId.includes('[')) {
+            // Success Case: We have real data
+            document.getElementById('display-id').innerText = empId;
+            document.getElementById('display-name').innerText = decodeURIComponent(empName).replace(/_/g, ' ');
+            
+            document.getElementById('status-msg').innerText = "Handshake Successful";
+            document.getElementById('status-msg').className = "status success";
+            document.getElementById('launch-btn').style.display = "block";
+            
+            // Save for your Game's High Score Logic
+            localStorage.setItem('game_user_id', empId);
+            localStorage.setItem('game_user_name', empName);
         } else {
-            idDisplay.innerText = "Not Found";
+            // Failure Case: No data found in URL
+            document.getElementById('status-msg').innerText = "Waiting for Portal Handshake...";
+            console.log("Session active but parameters missing in redirect.");
         }
-        
-        if (foundName) {
-            nameDisplay.innerText = foundName;
-            const isPlaceholder = foundName.includes('Placeholder');
-            document.getElementById('name-status').innerText = isPlaceholder ? "PENDING DATA" : "SYNCED";
-            document.getElementById('name-status').className = isPlaceholder ? "status-tag info" : "status-tag success";
-        } else {
-            nameDisplay.innerText = "Not Found";
-        }
-
-        sourceDisplay.innerText = source;
     }
 
-    // Run automatically on page load
-    window.onload = startDeepScan;
+    function launchGame() {
+        // This would lead to your main game file
+        alert("Launching Dash Game as: " + localStorage.getItem('game_user_name'));
+        // window.location.href = "game.html"; 
+    }
+
+    window.onload = processHandshake;
 </script>
 
 </body>
