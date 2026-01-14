@@ -3,128 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dash Sync | Advanced Diagnostic</title>
+    <title>Dash Sync | SharePoint Link Tester</title>
     <style>
         :root { --dash-blue: #0056b3; --seamex-orange: #ff6600; --bg: #f4f7f9; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); border-top: 8px solid var(--dash-blue); }
         .logo-area { text-align: center; margin-bottom: 25px; }
         .powered-by { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; }
-        .data-row { background: #fafafa; border: 1px solid #eaeaea; padding: 15px; border-radius: 10px; margin-bottom: 12px; position: relative; overflow: hidden; }
+        .data-row { background: #fafafa; border: 1px solid #eaeaea; padding: 15px; border-radius: 10px; margin-bottom: 12px; position: relative; }
         .label { font-size: 11px; color: var(--dash-blue); font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
-        .value { font-size: 18px; color: #333; font-family: 'Monaco', 'Consolas', monospace; word-break: break-all; }
-        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-top: 8px; }
+        .value { font-size: 18px; color: #333; font-family: 'Monaco', 'Consolas', monospace; word-break: break-all; min-height: 24px; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-top: 8px; font-weight: bold; }
         .fail { background: #ffebee; color: #c62828; }
         .success { background: #e8f5e9; color: #2e7d32; }
-        .btn-group { margin-top: 20px; display: flex; gap: 10px; }
-        button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-main { background: var(--dash-blue); color: white; }
-        .btn-sec { background: #eee; color: #444; }
-        button:active { transform: scale(0.98); }
-        .debug-log { margin-top: 20px; font-size: 11px; color: #666; background: #333; color: #0f0; padding: 10px; border-radius: 5px; width: 100%; max-width: 450px; height: 100px; overflow-y: scroll; display: none; }
+        .info { background: #e3f2fd; color: #1565c0; }
+        button { width: 100%; margin-top: 20px; padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: var(--dash-blue); color: white; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div class="logo-area">
-        <h2 style="margin:0; color: #222;">User Data Link</h2>
+        <h2 style="margin:0; color: #222;">Dash Game Sync</h2>
         <div class="powered-by">Powered By Seamex</div>
     </div>
 
     <div class="data-row">
-        <div class="label">Poornata ID (Employee ID)</div>
-        <div id="p-id" class="value">Not Found</div>
-        <div id="id-status" class="status-tag fail">No Access</div>
+        <div class="label">Poornata ID (hdnpoornataid)</div>
+        <div id="p-id" class="value">Detecting...</div>
+        <div id="id-status" class="status-tag fail">Offline</div>
     </div>
 
     <div class="data-row">
-        <div class="label">User Name</div>
-        <div id="p-name" class="value">Not Found</div>
-        <div id="name-status" class="status-tag fail">No Access</div>
+        <div class="label">Employee Name (hdnName)</div>
+        <div id="p-name" class="value">Detecting...</div>
+        <div id="name-status" class="status-tag fail">Offline</div>
     </div>
 
     <div class="data-row" style="border-left: 4px solid var(--seamex-orange);">
-        <div class="label">Source Detected</div>
+        <div class="label">Link Source</div>
         <div id="p-source" class="value" style="font-size: 14px;">None</div>
     </div>
 
-    <div class="btn-group">
-        <button class="btn-sec" onclick="toggleDebug()">Debug Console</button>
-        <button class="btn-main" onclick="startDeepScan()">Run Deep Scan</button>
-    </div>
+    <button onclick="startDeepScan()">Manual Refresh</button>
 </div>
 
-<pre id="debug" class="debug-log"></pre>
-
 <script>
-    function log(msg) {
-        const d = document.getElementById('debug');
-        d.innerHTML += `> ${msg}\n`;
-        d.scrollTop = d.scrollHeight;
-    }
-
     function startDeepScan() {
-        log("Starting Scan...");
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // 1. Define the keys we are looking for (including your new SharePoint classes)
+        const idKeys = ['hdnpoornataid', 'hdnPoornataId', 'id', 'empid'];
+        const nameKeys = ['hdnName', 'name', 'user'];
+
         let foundId = null;
         let foundName = null;
         let source = "None";
 
-        // 1. Try URL Parameters (e.g., ?id=12345&name=John)
-        const urlParams = new URLSearchParams(window.location.search);
-        foundId = urlParams.get('id') || urlParams.get('empid') || urlParams.get('poornata');
-        foundName = urlParams.get('name') || urlParams.get('user');
-        if(foundId) source = "URL Parameters";
-
-        // 2. Try LocalStorage
-        if(!foundId) {
-            log("Checking LocalStorage...");
-            for (let i = 0; i < localStorage.length; i++) {
-                let key = localStorage.key(i).toLowerCase();
-                if(key.includes('emp') || key.includes('user') || key.includes('poornata')) {
-                    foundId = localStorage.getItem(localStorage.key(i));
-                    source = "LocalStorage (" + key + ")";
-                }
+        // 2. Search URL Parameters for any of the keys
+        for (let key of idKeys) {
+            let val = urlParams.get(key);
+            if (val && !val.includes('[') && val !== "null") {
+                foundId = val;
+                source = "SharePoint URL Link";
+                break;
+            } else if (val) {
+                foundId = "Placeholder Detected: " + val;
             }
         }
 
-        // 3. Try Cookies (Iterative check)
-        if(!foundId) {
-            log("Checking Cookies...");
-            const cookies = document.cookie.split(';');
-            cookies.forEach(c => {
-                const [k, v] = c.trim().split('=');
-                log("Cookie found: " + k);
-                if(k.toLowerCase().includes('id') || k.toLowerCase().includes('user')) {
-                    foundId = v;
-                    source = "Cookies";
-                }
-            });
+        for (let key of nameKeys) {
+            let val = urlParams.get(key);
+            if (val && !val.includes('[') && val !== "null") {
+                foundName = decodeURIComponent(val).replace(/_/g, ' ');
+                break;
+            } else if (val) {
+                foundName = "Placeholder Detected: " + val;
+            }
         }
 
-        // Update UI
-        if(foundId) {
-            document.getElementById('p-id').innerText = foundId;
-            document.getElementById('id-status').innerText = "LINKED";
-            document.getElementById('id-status').className = "status-tag success";
+        // 3. Update UI Elements
+        const idDisplay = document.getElementById('p-id');
+        const nameDisplay = document.getElementById('p-name');
+        const sourceDisplay = document.getElementById('p-source');
+
+        if (foundId) {
+            idDisplay.innerText = foundId;
+            const isPlaceholder = foundId.includes('Placeholder');
+            document.getElementById('id-status').innerText = isPlaceholder ? "PENDING DATA" : "SYNCED";
+            document.getElementById('id-status').className = isPlaceholder ? "status-tag info" : "status-tag success";
+        } else {
+            idDisplay.innerText = "Not Found";
         }
         
-        if(foundName) {
-            document.getElementById('p-name').innerText = foundName;
-            document.getElementById('name-status').innerText = "LINKED";
-            document.getElementById('name-status').className = "status-tag success";
+        if (foundName) {
+            nameDisplay.innerText = foundName;
+            const isPlaceholder = foundName.includes('Placeholder');
+            document.getElementById('name-status').innerText = isPlaceholder ? "PENDING DATA" : "SYNCED";
+            document.getElementById('name-status').className = isPlaceholder ? "status-tag info" : "status-tag success";
+        } else {
+            nameDisplay.innerText = "Not Found";
         }
 
-        document.getElementById('p-source').innerText = source;
-        log("Scan Complete. Result: " + (foundId ? "Success" : "Failed"));
+        sourceDisplay.innerText = source;
     }
 
-    function toggleDebug() {
-        const d = document.getElementById('debug');
-        d.style.display = d.style.display === 'none' ? 'block' : 'none';
-    }
-
-    // Auto-run
+    // Run automatically on page load
     window.onload = startDeepScan;
 </script>
 
