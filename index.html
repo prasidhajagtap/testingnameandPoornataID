@@ -3,67 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dash Game | WebView Sync Test</title>
+    <title>Dash Sync | Advanced Diagnostic</title>
     <style>
-        :root { --dash-blue: #0056b3; --seamex-gray: #777; }
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { background: white; border-radius: 15px; padding: 25px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 6px solid var(--dash-blue); }
-        .header { text-align: center; margin-bottom: 20px; }
-        .branding { font-size: 12px; color: var(--seamex-gray); text-transform: uppercase; letter-spacing: 1px; }
-        .result-item { background: #f8f9fa; border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-        .label { font-size: 11px; color: #888; font-weight: bold; }
-        .value { font-size: 16px; color: #222; font-family: 'Courier New', monospace; }
-        .success { color: #28a745; font-weight: bold; }
-        button { width: 100%; padding: 15px; background: var(--dash-blue); color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        :root { --dash-blue: #0056b3; --seamex-orange: #ff6600; --bg: #f4f7f9; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); border-top: 8px solid var(--dash-blue); }
+        .logo-area { text-align: center; margin-bottom: 25px; }
+        .powered-by { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px; }
+        .data-row { background: #fafafa; border: 1px solid #eaeaea; padding: 15px; border-radius: 10px; margin-bottom: 12px; position: relative; overflow: hidden; }
+        .label { font-size: 11px; color: var(--dash-blue); font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+        .value { font-size: 18px; color: #333; font-family: 'Monaco', 'Consolas', monospace; word-break: break-all; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-top: 8px; }
+        .fail { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; }
+        .btn-group { margin-top: 20px; display: flex; gap: 10px; }
+        button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-main { background: var(--dash-blue); color: white; }
+        .btn-sec { background: #eee; color: #444; }
+        button:active { transform: scale(0.98); }
+        .debug-log { margin-top: 20px; font-size: 11px; color: #666; background: #333; color: #0f0; padding: 10px; border-radius: 5px; width: 100%; max-width: 450px; height: 100px; overflow-y: scroll; display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h2 style="margin:0;">Game Sync Tester</h2>
-        <div class="branding">Powered By Seamex</div>
+<div class="card">
+    <div class="logo-area">
+        <h2 style="margin:0; color: #222;">User Data Link</h2>
+        <div class="powered-by">Powered By Seamex</div>
     </div>
 
-    <div class="result-item">
-        <div class="label">POORNATA ID</div>
-        <div id="p-id" class="value">Searching...</div>
+    <div class="data-row">
+        <div class="label">Poornata ID (Employee ID)</div>
+        <div id="p-id" class="value">Not Found</div>
+        <div id="id-status" class="status-tag fail">No Access</div>
     </div>
 
-    <div class="result-item">
-        <div class="label">EMPLOYEE NAME</div>
-        <div id="p-name" class="value">Searching...</div>
+    <div class="data-row">
+        <div class="label">User Name</div>
+        <div id="p-name" class="value">Not Found</div>
+        <div id="name-status" class="status-tag fail">No Access</div>
     </div>
 
-    <button onclick="runDiagnostic()">Refresh Data</button>
-    
-    <p style="font-size: 10px; color: #999; text-align: center; margin-top: 20px;">
-        Note: If fields show "Searching...", the WebView may not have access to the Poornata session cookies.
-    </p>
+    <div class="data-row" style="border-left: 4px solid var(--seamex-orange);">
+        <div class="label">Source Detected</div>
+        <div id="p-source" class="value" style="font-size: 14px;">None</div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn-sec" onclick="toggleDebug()">Debug Console</button>
+        <button class="btn-main" onclick="startDeepScan()">Run Deep Scan</button>
+    </div>
 </div>
 
+<pre id="debug" class="debug-log"></pre>
+
 <script>
-    function runDiagnostic() {
-        // Attempt to extract from document.cookie
-        const allCookies = document.cookie;
-        console.log("Raw Cookies:", allCookies);
-
-        // Logic to find specific keys
-        function getVal(key) {
-            const match = document.cookie.match(new RegExp('(^| )' + key + '=([^;]+)'));
-            return match ? decodeURIComponent(match[2]) : null;
-        }
-
-        // Potential Poornata/SharePoint cookie keys
-        const empId = getVal('EmployeeID') || getVal('WSS_Id') || getVal('FedAuth');
-        const empName = getVal('UserName') || getVal('UserDisplayName');
-
-        document.getElementById('p-id').innerHTML = empId ? `<span class="success">${empId}</span>` : "Not Found";
-        document.getElementById('p-name').innerHTML = empName ? `<span class="success">${empName}</span>` : "Not Found";
+    function log(msg) {
+        const d = document.getElementById('debug');
+        d.innerHTML += `> ${msg}\n`;
+        d.scrollTop = d.scrollHeight;
     }
 
-    // Auto-run on load
-    window.onload = runDiagnostic;
+    function startDeepScan() {
+        log("Starting Scan...");
+        let foundId = null;
+        let foundName = null;
+        let source = "None";
+
+        // 1. Try URL Parameters (e.g., ?id=12345&name=John)
+        const urlParams = new URLSearchParams(window.location.search);
+        foundId = urlParams.get('id') || urlParams.get('empid') || urlParams.get('poornata');
+        foundName = urlParams.get('name') || urlParams.get('user');
+        if(foundId) source = "URL Parameters";
+
+        // 2. Try LocalStorage
+        if(!foundId) {
+            log("Checking LocalStorage...");
+            for (let i = 0; i < localStorage.length; i++) {
+                let key = localStorage.key(i).toLowerCase();
+                if(key.includes('emp') || key.includes('user') || key.includes('poornata')) {
+                    foundId = localStorage.getItem(localStorage.key(i));
+                    source = "LocalStorage (" + key + ")";
+                }
+            }
+        }
+
+        // 3. Try Cookies (Iterative check)
+        if(!foundId) {
+            log("Checking Cookies...");
+            const cookies = document.cookie.split(';');
+            cookies.forEach(c => {
+                const [k, v] = c.trim().split('=');
+                log("Cookie found: " + k);
+                if(k.toLowerCase().includes('id') || k.toLowerCase().includes('user')) {
+                    foundId = v;
+                    source = "Cookies";
+                }
+            });
+        }
+
+        // Update UI
+        if(foundId) {
+            document.getElementById('p-id').innerText = foundId;
+            document.getElementById('id-status').innerText = "LINKED";
+            document.getElementById('id-status').className = "status-tag success";
+        }
+        
+        if(foundName) {
+            document.getElementById('p-name').innerText = foundName;
+            document.getElementById('name-status').innerText = "LINKED";
+            document.getElementById('name-status').className = "status-tag success";
+        }
+
+        document.getElementById('p-source').innerText = source;
+        log("Scan Complete. Result: " + (foundId ? "Success" : "Failed"));
+    }
+
+    function toggleDebug() {
+        const d = document.getElementById('debug');
+        d.style.display = d.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Auto-run
+    window.onload = startDeepScan;
 </script>
 
 </body>
